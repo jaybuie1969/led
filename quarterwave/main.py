@@ -1,6 +1,7 @@
 '''
 This is the script that gets called when this project is called by the application's led.bat batch file
-For example -- led quarterwave
+This also serves as an example project for how to set up any other projects
+Command line call -- led quarterwave <<command line parameters>>
 '''
 
 from  matplotlib import pyplot as plt
@@ -49,9 +50,22 @@ def main():
 		axis_current.set_ylim(-2.1 * current_amplitude, 2.1 * current_amplitude)
 		line_current, = axis_current.plot(antenna.frame)
 
-		# Run the set of sine wave generaters through the antenna for the desired number of samples
+		'''
+		# Do the following four times:
+		# Feed one sine wave cycle into the antenna
+		# Feed a zero signal in for one-fifth the length of the antenna
+		for i in range(4):
+			(time_series, frames) = actions.run_model(antenna, sine_sources[0], sine_sources[0].wavelength, figure, line_current)
+			(time_series, frames) = actions.run_model(antenna, zero_source, antenna.length / 5, figure, line_current)
+		'''
+
+		'''
+		# Run the set of sine wave generators through the antenna for the desired number of samples
+		samples_to_run = int(8 * sine_sources[0].wavelength)
+		(time_series, frames) = actions.run_model(antenna, sine_sources, samples_to_run, figure, line_current)
+		'''
+
 		samples_to_run = int(sine_sources[0].wavelength)
-		samples_to_run = 10
 		(time_series, frames) = actions.run_model(antenna, sine_sources, samples_to_run, figure, line_current)
 
 		# Run a zereo signal through the antenna for the amount of time it takes for any current on the antemma to propagate to ground
@@ -70,6 +84,8 @@ def main():
 
 		# Save the data frames from the model's result to a video file, with each frame of data representing a frame of video
 		actions.save_frames_video(bgr_frames, configuration.video_file, (bgr_frames.shape[1], 2))
+
+		actions.color_time_series(time_series, configuration.colormap, figure, axis_current)
 
 if (__name__ == "__main__"):
 	# This Python script was invoked directly, call this script's main() method

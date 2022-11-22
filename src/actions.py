@@ -2,9 +2,8 @@ import cv2
 import json
 import numpy as np
 
-from matplotlib import pyplot as plt
+from matplotlib import colors, pyplot as plt
 from matplotlib.axes._subplots import Axes, Subplot
-from matplotlib.colors import ListedColormap
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from PIL import Image
@@ -118,7 +117,7 @@ def run_model(model:led.src.baseclasses.LEDModel, source:any, samples_to_run:int
 	return (time_series, frames)
 
 
-def color_time_series(time_series:List[any], colormap:ListedColormap, figure:Figure, axis:any):
+def color_time_series(time_series:List[any], colormap:any, figure:Figure, axis:any):
 	'''
 	This function takes a list of data and graphs it using the specified colormap
 
@@ -126,8 +125,8 @@ def color_time_series(time_series:List[any], colormap:ListedColormap, figure:Fig
 	----------
 	time_series : List[any]
 		A list of previous model run results, the type of list element is dependent upon the model's frame
-	colormap : matplotlib.colors.ListedColormap
-		The colormap that will be applied to the time_series argument
+	colormap : any
+		The colormap that will be applied to the time_series argument, it must be of a class in the matplotlib.colors
 	figure : matplotlib.figure.Figure
 		A Figure object used for graphing the time_series data
 	axis : any
@@ -144,9 +143,9 @@ def color_time_series(time_series:List[any], colormap:ListedColormap, figure:Fig
 		raise Exception("time_series argument must be a non-empty list, is it an empty list")
 
 	if (colormap == None):
-		raise Exception("colormap must be a matplotlib.colors.ListedColormap object")
-	elif (type(colormap) != ListedColormap):
-		raise Exception(f"colormap must be a matplotlib.colors.ListedColormap object, not an object of type {type(colormap).__name__}")
+		raise Exception("colormap must be a color in the matplotlib.colors module")
+	elif (colormap.__class__.__module__ != colors.__name__):
+		raise Exception(f"colormap must be a color in the matplotlib.colors module, not an object of type {type(colormap).__name__}")
 
 	if (figure == None):
 		raise Exception("figure argument must be a matplotlib.figure.Figure object")
@@ -210,7 +209,7 @@ def save_time_series(time_series:List[any], filename:str):
 		json.dump(time_series, file_out)
 
 
-def colorize_frames(frames:np.ndarray, colormap:ListedColormap, frame_shape:tuple):
+def colorize_frames(frames:np.ndarray, colormap:any, frame_shape:tuple):
 	'''
 	This function takes in a set of data frames and applies color to its values according to the accompanying colormap
 	Because this application uses two different libraries, one to generate an image and one to generate a video
@@ -221,8 +220,8 @@ def colorize_frames(frames:np.ndarray, colormap:ListedColormap, frame_shape:tupl
 	----------
 	frame : numpy.ndarray
 		A set of frames from the model run that will have the colormap applied to them
-	colormap : matplotlib.colors.ListedColormap
-		The colormap that will be applied to the values in frames
+	colormap : any
+		The colormap that will be applied to the time_series argument, it must be of a class in the matplotlib.colors
 	frame_shape : tuple
 		The shape of a single data frame stored in the model
 
@@ -249,9 +248,9 @@ def colorize_frames(frames:np.ndarray, colormap:ListedColormap, frame_shape:tupl
 			raise Exception(f"frames argument must be a numpy array, not an object of type {type(frames).__name__}")
 
 	if (colormap == None):
-		raise Exception("colormap argument must be a matplotlib.colors.ListedColormap object")
-	elif (type(colormap) != ListedColormap):
-		raise Exception(f"colormap argument must be a matplotlib.colors.ListedColormap object, not an object of type {type(colormap).__name__}")
+		raise Exception("colormap argument must be a color in the matplotlib.colors module")
+	elif (colormap.__class__.__module__ != colors.__name__):
+		raise Exception(f"colormap must be a color in the matplotlib.colors module, not an object of type {type(colormap).__name__}")
 
 	if (frame_shape == None):
 		raise Exception("frame_shape argument must be a non-empty tuple of integers")
