@@ -64,11 +64,20 @@ def run_model(model:led.src.baseclasses.LEDModel, source:any, samples_to_run:int
 		elif (not issubclass(source_type, led.src.baseclasses.SignalGenerator)):
 			raise Exception(f"source argument must be either a signal source or a list of sources that are subclasses of led.src.baseclasses.SignalGenerator, {source_type.__name__} is not")
 
-	# An invalid samples_to_run is not fatal, just use zero instead
-	if ((samples_to_run == None) or (type(samples_to_run) not in [int, float]) or (samples_to_run < 0)):
-		samples_to_run = 0
+	if (samples_to_run == None):
+		# samples_to_run is None, meaning that this method should run until the generator object returns an end_of_signal value of True
+		# RIGHT NOW, THIS ONLY WORKS WITH ONE SOURCE, A FUTURE UPGRADE WILL ALLOW IT TO HANDLE MULITPLE SOURCES
+
+		if (not hasattr(source, "end_of_signal")):
+			raise Exception(f"source argument of type {type(source).__name__} does not have an end_of_signal attribute")
+		else:
+			samples_to_run = None
 	else:
-		samples_to_run = int(samples_to_run)
+		# samples_to_run is not None, check it -- an invalid samples_to_run is not fatal, zero will be used instead
+		if ((samples_to_run == None) or (type(samples_to_run) not in [int, float]) or (samples_to_run < 0)):
+			samples_to_run = 0
+		else:
+			samples_to_run = int(samples_to_run)
 
 	if ((figure != None) and (type(figure) != Figure)):
 		raise Exception(f"if present, figure argument must be of type matplotlib.figure.Figure, not {type(figure).__name__}")
@@ -97,22 +106,35 @@ def run_model(model:led.src.baseclasses.LEDModel, source:any, samples_to_run:int
 		frames = np.empty((0, *model.frame.shape))
 
 	# All the set-up is done, now iterate over the number of samples and run this model
-	for i in range(samples_to_run):
-		# Add the values together from every source
-		value = 0
-		if (type(source) != list):
-			value = source.next
-		elif (len(source) > 0):
-			value = sum([i.next for i in source])
+	if (samples_to_run == None):
+		while (not source.end_of_signal):
+			model.input(source.next)
+			time_series.append(model.frame[0])
+			frames = np.append(frames, [model.frame], axis=0)
 
-		model.input(value)
-		time_series.append(model.frame[0])
-		frames = np.append(frames, [model.frame], axis=0)
+			if (display_graph):
+				line_frame.set_ydata(model.frame)
+				figure.canvas.draw()
+				figure.canvas.flush_events()
+	else:
+		# This method call should run for a specific number of samples, iterate over that range and and run the samples
 
-		if (display_graph):
-			line_frame.set_ydata(model.frame)
-			figure.canvas.draw()
-			figure.canvas.flush_events()
+		for i in range(samples_to_run):
+			# Add the values together from every source
+			value = 0
+			if (type(source) != list):
+				value = source.next
+			elif (len(source) > 0):
+				value = sum([i.next for i in source])
+
+			model.input(value)
+			time_series.append(model.frame[0])
+			frames = np.append(frames, [model.frame], axis=0)
+
+			if (display_graph):
+				line_frame.set_ydata(model.frame)
+				figure.canvas.draw()
+				figure.canvas.flush_events()
 
 	return (time_series, frames)
 

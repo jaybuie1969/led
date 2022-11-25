@@ -68,17 +68,18 @@ class Configuration:
 		# If there are no error messages, this base confiuration ojbect is configured successfully
 		self.configured = len(self.errors) == 0
 
-	def check_parsed_arguments(self, arguments:Namespace):
+	def check_parsed_arguments(self):
 		'''
 		This method handles looking for the base set of command-line parameters permitted or required by this base configuration object
 		IN THE CHILD CLASS, THIS METHOD SHOULD BE CALLED AS SOON AS self.argument_parser IS FULLY SET UP
 
-		Parameters
-		----------
-			arguments : argparser.Namespace
-				The set of command-line arguments retrieved by the argument parser
+		Returns:
+		--------
+		argparser.Namespace
+			The set of command-line arguments retrieved by the argument parser
 		'''
 
+		arguments = self.argument_parser.parse_args()
 		if (type(arguments) == Namespace):
 			# For each of these destination filename arguments, check to see if each one includes a directory path or is just a bare file name
 			# If it includes a directory path, copy it across as-is; if it is a bare file name, prepend the projectfolder argument to it
@@ -98,6 +99,8 @@ class Configuration:
 			elif ((self.video_file.find("/") + self.video_file.find("\\")) < 0):
 				self.video_file = f"{arguments.projectfolder}/{self.video_file}"
 
+		return arguments
+
 
 class LEDModel:
 	'''
@@ -116,6 +119,7 @@ class LEDModel:
 		'''
 		This computed property is an alias for whatever property in the child subclass is intended to hold the current state of this model
 		'''
+		print("In property self.frame")
 		return getattr(self, self.frame_attribute) if (self.frame_attribute != None) else None
 
 

@@ -1,6 +1,80 @@
+import json
 from math import pi, sin
+from pathlib import Path
+
+import json
 
 from led.src.baseclasses import SignalGenerator as __BaseGenerator__
+
+
+# Define a dit/dot as a single one with a trailing zero for spacing
+dit = [1, 0]
+
+# Define a dah/dash as three ones with a trailing zero for spacing
+dah = [1, 1, 1, 0]
+
+space = [0, 0, 0, 0, 0, 0]
+
+# Map each character to a list of dits and dahs
+morse_map = {
+	"a": [dit, dah],
+	"b": [dah, dit, dit, dit],
+	"c": [dah, dit, dah, dit],
+	"d": [dah, dit, dit],
+	"e": [dit],
+	"f": [dit, dit, dah, dit],
+	"g": [dah, dah, dit],
+	"h": [dit, dit, dit, dit],
+	"i": [dit, dit],
+	"j": [dit, dah, dah, dah],
+	"k": [dah, dit, dah],
+	"l": [dit, dah, dit, dit],
+	"m": [dah, dah],
+	"n": [dah, dit],
+	"o": [dah, dah, dah],
+	"p": [dit, dah, dah, dit],
+	"q": [dah, dah, dit, dah],
+	"r": [dit, dah, dit],
+	"s": [dit, dit, dit],
+	"t": [dah],
+	"u": [dit, dit, dah],
+	"v": [dit, dit, dit, dah],
+	"w": [dit, dah, dah],
+	"x": [dah, dit, dit, dah],
+	"y": [dah, dit, dah, dah],
+	"z": [dah, dah, dit, dit],
+	"1": [dit, dah, dah, dah, dah],
+	"2": [dit, dit, dah, dah, dah],
+	"3": [dit, dit, dit, dah, dah],
+	"4": [dit, dit, dit, dit, dah],
+	"5": [dit, dit, dit, dit, dit],
+	"6": [dah, dit, dit, dit, dit],
+	"7": [dah, dah, dit, dit, dit],
+	"8": [dah, dah, dah, dit, dit],
+	"9": [dah, dah, dah, dah, dit],
+	"0": [dah, dah, dah, dah, dah],
+	",": [dah, dah, dit, dit, dah, dah],
+	".": [dit, dah, dit, dah, dit, dah],
+	"?": [dit, dit, dah, dah, dit, dit],
+	"!": [dah, dit, dah, dit, dah, dah],
+	" ": [space],
+}
+
+
+
+def convert_to_morse(signal:str):
+	'''
+	Parameters
+	----------
+	signal : str
+		The string of text to be converted to Morse code
+
+	Returns
+	-------
+	List[List[int]]
+		A list of Morse code characters encoded as lists of zeros and ones
+	'''
+	return [morse_map[i] for i in signal if (i in morse_map)] if (type(signal) == str) else []
 
 
 class SineWaveGenerator(__BaseGenerator__):
@@ -82,3 +156,168 @@ class ConstantGenerator(__BaseGenerator__):
 		'''
 
 		self.current_value = float(value) if ((value != None) and (type(value) in [int, float])) else self.default_value
+
+
+class MorseCodeGenerator(__BaseGenerator__):
+	'''
+	This class defines a Morse code source that generates dits/dots and dahs/dashes from signal message in a text file
+	'''
+
+	signal_file = None
+
+	signal = None
+	morse = []
+	bitstream = []
+
+	stream_length = 0
+	end_of_signal = False
+
+	def __init__(self, signal_file:any):
+		'''
+		Parameters
+		----------
+		signal_file : any pathlib.Path child class
+			The parsed path to the input signal text file that will be converted to Morse code
+		'''
+
+		if (signal_file == None):
+			raise Exception("argument signal_file cannot be None")
+		elif (not issubclass(signal_file.__class__, Path)):
+			raise Exception(f"argument signal_file must be a parsed pathlib.Path child object, not an object of type {type(signal_file).__name__}")
+		elif (not signal_file.is_file()):
+			raise Exception(f"argument signal_file {signal_file} is not a path to a file")
+
+		# If this method call has made it here without crashing, things are good so far, now attempt to read in the signal file and convert it to Morse code
+		# Newlines in the signal are replaced with spaces, and leading and trailing whitespace is trimmed
+		# Since Morse code is case-insensitive, the signal is all converted to lower case
+
+		self.signal_file = signal_file
+		with open(self.signal_file) as file_in:
+			self.signal = str(file_in.read()).replace("\n", " ").strip().lower()
+
+		self.morse = convert_to_morse(self.signal)
+		delta = abs(len(self.signal) - len(self.morse))
+		if (delta > 0):
+			raise Exception(f"argument signal_file {signal_file} contains {delta} character{'s' if (delta != 1) else ''} that could not be mapped to Morse code")
+
+		# If this method call has made it here without crashing, the signal file has been read in, converted to Morse code and no mapped characters were encountered
+
+		# When building the bitstream, append some zeros to each character for spacing
+		self.bitstream = []
+		for morse_character in self.morse:
+			character_bits = [bit for didah in morse_character for bit in didah]
+			character_bits.extend([0, 0, 0])
+			self.bitstream.extend(character_bits)
+
+		# Since the length of the stream is used a lot, compute and retain it
+		self.stream_length = len(self.bitstream)
+
+	def compute_next_value(self):
+		'''
+		This method overrides the same method from the superclass and actually does some work
+		Specifically, it selects the next bit to be emitted by this Morse code generator
+
+		Returns
+		-------
+		int
+			The next bit from this Morse code generator
+		'''
+
+		# Before selecting the current value, make sure that this generator's counter is not beyond the length of the bitstream
+		if (self.counter >= self.stream_length):
+			self.end_of_signal = True
+
+		if ((not self.end_of_signal) and (self.counter < self.stream_length)):
+			self.current_value = self.bitstream[self.counter]
+		else:
+			self.current_value = None
+
+
+class SignalRepeater(__BaseGenerator__):
+	'''
+	This class defines a "generator" that repeats a signal from a JSON-formatted list file
+	The repeated signal can optionally be scaled up or down in magnitude
+	'''
+
+	signal_file = None
+	scaling_factor = 1.0
+
+	signal = None
+	signal_length = 0
+	signal_minimum = 0
+	signal_maximum = 0
+	end_of_signal = False
+
+	def __init__(self, signal_file:any, scaling_factor:float=None):
+		'''
+		Parameters
+		----------
+		signal_file : any pathlib.Path child class
+			The parsed path to the input signal JSON-formatted list that will be repeated by this "generator"
+		scaling_factor : float
+			The amount by which the repeated signal will be scaled, will default to one if not present
+		'''
+
+		if (signal_file == None):
+			raise Exception("argument signal_file cannot be None")
+		elif (not issubclass(signal_file.__class__, Path)):
+			raise Exception(f"argument signal_file must be a parsed pathlib.Path child object, not an object of type {type(signal_file).__name__}")
+		elif (not signal_file.is_file()):
+			raise Exception(f"argument signal_file {signal_file} is not a path to a file")
+
+		if (scaling_factor != None):
+			if (type(scaling_factor) not in [int, float]):
+				raise Exception(f"if present, argument scaling_factor must be a number, not an object of type {type(scaling_factor).__name__}")
+			else:
+				scaling_factor = float(scaling_factor)
+				if (scaling_factor == 0.0):
+					# Allow a scaling_factof of zero, but alert the user
+					print("WARNING - A scaling_factor of zero will return nothing but zeros from this signal repeater")
+
+		# If this method call has made it here without crashing, things are good so far, now attempt to read in the signal file
+
+		# Copy the initialization arguments to the object's parameters
+		self.signal_file = signal_file
+		if (scaling_factor != None):
+			self.scaling_factor = scaling_factor
+
+		# Attempt to read in the JSON-formatted object from signal_file and raise an Exception if it doesn't contain a list
+		with open(self.signal_file) as file_in:
+			self.signal = json.load(file_in)
+
+		if (type(self.signal) != list):
+			raise Exception(f"signal_file argument {self.signal_file} must contain a JSON-formatted list, not a JSON formatted {type(self.signal).__name__}")
+
+		# If this method call has made it here without crashing, signal_file is syntactically valid, finish up initialization efforts
+
+		if (self.scaling_factor != 1.0):
+			self.signal = [self.scaling_factor * i for i in self.signal]
+
+		# Since the length of the signal is used in other calculations, compute and retain it
+		self.signal_length = len(self.signal)
+
+		if (self.signal_length > 0):
+			# Signal minimum and maximum are useful for setting y-range parameters when graphing a signal, compute them
+			self.signal_minimum = min(self.signal)
+			self.signal_maximum = max(self.signal)
+
+	def compute_next_value(self):
+		'''
+		This method overrides the same method from the superclass and actually does some work
+		Specifically, it selects the next bit to be emitted by this signal repeater
+
+		Returns
+		-------
+		float
+			The next value from the signal being repeated
+		'''
+
+		# Before selecting the current value, make sure that this "generator"'s counter is not beyond the length of the signal
+		if (self.counter >= self.signal_length):
+			self.end_of_signal = True
+
+		if ((not self.end_of_signal) and (self.counter < self.signal_length)):
+			self.current_value = self.signal[self.counter]
+		else:
+			self.current_value = None
+

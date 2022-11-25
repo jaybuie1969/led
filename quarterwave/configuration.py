@@ -63,8 +63,7 @@ class Configuration(__BaseConfiguration__):
 
 				# The parser arguments for this configuration object have been set up, now parse the command line and check for the base set of expected/available
 				# arguments as defined by the superclass
-				arguments = self.argument_parser.parse_args()
-				super(Configuration, self).check_parsed_arguments(arguments)
+				arguments = super(Configuration, self).check_parsed_arguments()
 
 				if (arguments.length <= 0):
 					self.errors.append(f"The -l (--length) argument must be a positive integer, not {arguments.length}")
@@ -93,5 +92,5 @@ class Configuration(__BaseConfiguration__):
 		# All configuration work has been done, check for errors and dipslay any that occurred
 		self.configured = len(self.errors) == 0
 		if (not self.configured):
-			print(f"ERROR - This LED project could not be configured.  The following error{'s' if (len(self.errors)) else ''} occurred:")
+			print(f"ERROR - This LED project could not be configured.  The following error{'s' if (len(self.errors) != 1) else ''} occurred:")
 			print("\n".join(self.errors))

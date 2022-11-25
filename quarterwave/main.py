@@ -85,7 +85,6 @@ def main():
 		# Save the data frames from the model's result to a video file, with each frame of data representing a frame of video
 		actions.save_frames_video(bgr_frames, configuration.video_file, (bgr_frames.shape[1], 2))
 
-		actions.color_time_series(time_series, configuration.colormap, figure, axis_current)
 
 if (__name__ == "__main__"):
 	# This Python script was invoked directly, call this script's main() method
