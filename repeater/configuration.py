@@ -13,6 +13,7 @@ class Configuration(__BaseConfiguration__):
 
 	signal_file = None
 	scaling_factor = None
+	logarithmic = None
 	length = None
 	direction = None
 	origin_point = None
@@ -60,6 +61,7 @@ class Configuration(__BaseConfiguration__):
 
 				self.argument_parser.add_argument("-s", "--signal", "--message", type=str, required=True, help="JSON-formatted list file that contains the signal to be replayed")
 				self.argument_parser.add_argument("-f", "--factor", "--scalingfactor", "--scaling-factor", type=float, help="Amount by which the signal being replayed will be scaled")
+				self.argument_parser.add_argument("-g", "--log", "--logarithmic", action="store_true", help="Flag indicating that the signal being replayed should be coverted to a common logarithm")
 				self.argument_parser.add_argument("-l", "--length", type=int, required=True, help="Scrolling window length in pixels (int)")
 				self.argument_parser.add_argument("-d", "--direction", type=str, help='The direction the window scrolls in, valid values are "left", "right" and "both" (str)')
 				self.argument_parser.add_argument("-o", "--input_origin", "--inputorigin", type=float, help="For windows that scroll in both directions, the point in the window where the incoming value is placed (int)")
@@ -69,16 +71,18 @@ class Configuration(__BaseConfiguration__):
 				# arguments as defined by the superclass
 				arguments = super(Configuration, self).check_parsed_arguments()
 
+				self.logarithmic = arguments.log
+
 				if (arguments.signal == ""):
 					self.errors.append("-s (--signal/--message) argument cannot be an empty string")
 				else:
 					signal_file = arguments.signal if ((arguments.signal.find("/") + arguments.signal.find("\\")) >= 0) else f"{arguments.projectfolder}/{arguments.signal}"
 					if (not exists(signal_file)):
-						self.errors.append(f"-s (--signal/--message) argument {self.signal_file} is not a valid file path")
+						self.errors.append(f"-s (--signal/--message) argument {signal_file} is not a valid file path")
 					else:
 						self.signal_file = Path(signal_file)
 						if (not self.signal_file.is_file()):
-							self.errors.append(f"-s (--signal/--message) argument {self.signal_file} is not a valid file path")
+							self.errors.append(f"-s (--signal/--message) argument {signal_file} is not a valid file path")
 
 				# Accept scaling_factor argument as is, it was accepted as a floating-point value or is None -- both options are valid
 				self.scaling_factor = arguments.factor

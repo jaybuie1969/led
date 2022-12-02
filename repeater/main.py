@@ -22,7 +22,7 @@ def main():
 	This is the meat of this python script
 	'''
 
-	configuration = Configuration(default_time_series_file=default_time_series_file, default_image_file=default_image_file, default_video_file=default_video_file, default_colormap="Greens")
+	configuration = Configuration(default_time_series_file=default_time_series_file, default_image_file=default_image_file, default_video_file=default_video_file, default_colormap="rainbow")
 	if (configuration.configured):
 		# All required command-line parameters have been inspected and hav been found to be at least syntactically valid, attempt to run this project
 
@@ -30,7 +30,7 @@ def main():
 		window = ScrollingWindow(configuration.length, configuration.direction, configuration.input_origin)
 
 		# Initialize the Generator that will replay a previous signal
-		repeater_source = SignalRepeater(configuration.signal_file, configuration.scaling_factor)
+		repeater_source = SignalRepeater(configuration.signal_file, configuration.scaling_factor, configuration.logarithmic)
 
 		# This source will be used to feed no signal into the scrolling window
 		zero_source = ConstantGenerator()

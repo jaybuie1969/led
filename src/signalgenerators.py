@@ -1,5 +1,5 @@
 import json
-from math import pi, sin
+from math import log, pi, sin
 from pathlib import Path
 
 import json
@@ -241,6 +241,7 @@ class SignalRepeater(__BaseGenerator__):
 
 	signal_file = None
 	scaling_factor = 1.0
+	logarithmic = False
 
 	signal = None
 	signal_length = 0
@@ -248,7 +249,7 @@ class SignalRepeater(__BaseGenerator__):
 	signal_maximum = 0
 	end_of_signal = False
 
-	def __init__(self, signal_file:any, scaling_factor:float=None):
+	def __init__(self, signal_file:any, scaling_factor:float=None, logarithmic:bool=None):
 		'''
 		Parameters
 		----------
@@ -256,6 +257,8 @@ class SignalRepeater(__BaseGenerator__):
 			The parsed path to the input signal JSON-formatted list that will be repeated by this "generator"
 		scaling_factor : float
 			The amount by which the repeated signal will be scaled, will default to one if not present
+		logarithmic : bool
+			Optional flag indicating whether this signal should be converted to a common logarithm of its current value, will default to False if not present
 		'''
 
 		if (signal_file == None):
@@ -274,6 +277,13 @@ class SignalRepeater(__BaseGenerator__):
 					# Allow a scaling_factof of zero, but alert the user
 					print("WARNING - A scaling_factor of zero will return nothing but zeros from this signal repeater")
 
+		if (logarithmic != None):
+			# If logarithmic is not None, don't worry about the type, try and see if it can be resolved to a Boolean, raising an error if it cannot
+			try:
+				self.logarithmic = bool(logarithmic)
+			except:
+				raise Exception(f"If present, logarithmic must be able to resolve to a True or False, {logarithmic} does not")
+
 		# If this method call has made it here without crashing, things are good so far, now attempt to read in the signal file
 
 		# Copy the initialization arguments to the object's parameters
@@ -291,6 +301,7 @@ class SignalRepeater(__BaseGenerator__):
 		# If this method call has made it here without crashing, signal_file is syntactically valid, finish up initialization efforts
 
 		if (self.scaling_factor != 1.0):
+			# The incoming signal is being scaled and/or converted to a logarithm
 			self.signal = [self.scaling_factor * i for i in self.signal]
 
 		# Since the length of the signal is used in other calculations, compute and retain it
@@ -300,6 +311,19 @@ class SignalRepeater(__BaseGenerator__):
 			# Signal minimum and maximum are useful for setting y-range parameters when graphing a signal, compute them
 			self.signal_minimum = min(self.signal)
 			self.signal_maximum = max(self.signal)
+
+			if (self.logarithmic):
+				# This series is supposed to be presented logarithmically, logarithms do not like numbers less than or equal to zero
+				# So if necessary, this series will be shifted up so that its minimum value is 1 (because the common log of one is zero)
+
+				if (self.signal_minimum <= 0):
+					self.signal = [log(i + 1 - self.signal_minimum) for i in self.signal]
+				else:
+					self.signal = [log(i, 10) for i in self.signal]
+
+				# Re-compute the minimum and maximum now that the signal has been logarithmed
+				self.signal_minimum = min(self.signal)
+				self.signal_maximum = max(self.signal)
 
 	def compute_next_value(self):
 		'''
