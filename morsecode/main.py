@@ -4,6 +4,8 @@ This also serves as an example project for how to set up any other projects
 Command line call -- led morsecode <<command line parameters>>
 '''
 
+import numpy as np
+
 from  matplotlib import pyplot as plt
 
 import led.src.actions as actions
@@ -50,7 +52,21 @@ def main():
 		(time_series, frames) = actions.run_model(window, zero_source, window.length, figure, line, time_series, frames)
 
 		# Create colorized versions of the data frames using the colormap in the configuration
-		(rgb_frames, bgr_frames) = actions.colorize_frames(frames, configuration.colormap, window.frame.shape)
+		# This normal way of colorizing is commented out to do a special Christmas color scheme below
+		#(rgb_frames, bgr_frames) = actions.colorize_frames(frames, configuration.colormap, window.frame.shape)
+
+		# For Christmas, set the color frames so that a signal value of 0 == red and a value of 1 == green
+		# I had tried setting 0 == red and 1 == green using the "RdYlGn" color map, but the resulting Morse was not particularly legible when played
+		# on an LED light string
+		rgb_frames = np.zeros((frames.shape[0], frames.shape[1], 3), dtype=np.uint8)
+		bgr_frames = np.zeros((frames.shape[0], frames.shape[1], 3), dtype=np.uint8)
+		for i in range(frames.shape[0]):
+			rgb_frame = np.zeros((frames.shape[1], 3))
+			bgr_frame = np.zeros((frames.shape[1], 3))
+			rgb_frames[i][frames[i] == 1] = np.array([0, 255, 0], dtype=np.uint8)
+			#rgb_frames[i][frames[i] != 1] = np.array([255, 0, 0], dtype=np.uint8)
+			bgr_frames[i][frames[i] == 1] = np.array([0, 255, 0], dtype=np.uint8)
+			#bgr_frames[i][frames[i] != 1] = np.array([0, 0, 255], dtype=np.uint8)
 
 		# Save the time-series version of the model's result to a file
 		actions.save_time_series(time_series, configuration.time_series_file)
