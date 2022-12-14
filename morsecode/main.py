@@ -53,20 +53,18 @@ def main():
 
 		# Create colorized versions of the data frames using the colormap in the configuration
 		# This normal way of colorizing is commented out to do a special Christmas color scheme below
-		#(rgb_frames, bgr_frames) = actions.colorize_frames(frames, configuration.colormap, window.frame.shape)
+		#(rgb_frames, brg_frames) = actions.colorize_frames(frames, configuration.colormap, window.frame.shape)
 
 		# For Christmas, set the color frames so that a signal value of 0 == red and a value of 1 == green
 		# I had tried setting 0 == red and 1 == green using the "RdYlGn" color map, but the resulting Morse was not particularly legible when played
 		# on an LED light string
 		rgb_frames = np.zeros((frames.shape[0], frames.shape[1], 3), dtype=np.uint8)
-		bgr_frames = np.zeros((frames.shape[0], frames.shape[1], 3), dtype=np.uint8)
+		brg_frames = np.zeros((frames.shape[0], frames.shape[1], 3), dtype=np.uint8)
 		for i in range(frames.shape[0]):
-			rgb_frame = np.zeros((frames.shape[1], 3))
-			bgr_frame = np.zeros((frames.shape[1], 3))
 			rgb_frames[i][frames[i] == 1] = np.array([0, 255, 0], dtype=np.uint8)
-			#rgb_frames[i][frames[i] != 1] = np.array([255, 0, 0], dtype=np.uint8)
-			bgr_frames[i][frames[i] == 1] = np.array([0, 255, 0], dtype=np.uint8)
-			#bgr_frames[i][frames[i] != 1] = np.array([0, 0, 255], dtype=np.uint8)
+			rgb_frames[i][frames[i] != 1] = np.array([255, 0, 0], dtype=np.uint8)
+			brg_frames[i][frames[i] == 1] = np.array([0, 0, 255], dtype=np.uint8)
+			brg_frames[i][frames[i] != 1] = np.array([0, 255, 0], dtype=np.uint8)
 
 		# Save the time-series version of the model's result to a file
 		actions.save_time_series(time_series, configuration.time_series_file)
@@ -76,7 +74,7 @@ def main():
 		#image.show()
 
 		# Save the data frames from the model's result to a video file, with each frame of data representing a frame of video
-		actions.save_frames_video(bgr_frames, configuration.video_file, (bgr_frames.shape[1], 2))
+		actions.save_frames_video(brg_frames, configuration.video_file, (brg_frames.shape[1], 2))
 
 
 if (__name__ == "__main__"):

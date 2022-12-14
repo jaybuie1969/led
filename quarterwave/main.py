@@ -29,7 +29,8 @@ def main():
 		# Initialize the quarter-wave antenna model
 		antenna = QuarterWave(configuration.length)
 
-		sine_sources = [ SineWaveGenerator(configuration.wavelength, configuration.amplitude, configuration.phase) ]
+		sine_sources = []
+		sine_sources.append(SineWaveGenerator(configuration.wavelength, configuration.amplitude, configuration.phase))
 		#sine_sources.append(SineWaveGenerator(sine_sources[0].wavelength  / 2, None if (configuration.amplitude == None) else configuration.amplitude * 1.5, None if (configuration.phase is None) else configuration.phase + 1.57))
 		#sine_sources.append(SineWaveGenerator(sine_sources[0].wavelength  / 4, None if (configuration.amplitude == None) else configuration.amplitude * 2, None if (configuration.phase is None) else configuration.phase + 3.14))
 		#sine_sources.append(SineWaveGenerator(sine_sources[0].wavelength  / 8, None if (configuration.amplitude == None) else configuration.amplitude * 2.5, None if (configuration.phase is None) else configuration.phase - 1.57))
@@ -65,7 +66,7 @@ def main():
 		(time_series, frames) = actions.run_model(antenna, sine_sources, samples_to_run, figure, line_current)
 		'''
 
-		samples_to_run = int(sine_sources[0].wavelength)
+		samples_to_run = 2 * int(sine_sources[0].wavelength)
 		(time_series, frames) = actions.run_model(antenna, sine_sources, samples_to_run, figure, line_current)
 
 		# Run a zereo signal through the antenna for the amount of time it takes for any current on the antemma to propagate to ground
@@ -73,17 +74,17 @@ def main():
 		(time_series, frames) = actions.run_model(antenna, zero_source, samples_to_run, figure, line_current, time_series, frames)
 
 		# Create colorized versions of the data frames using the colormap in the configuration
-		(rgb_frames, bgr_frames) = actions.colorize_frames(frames, configuration.colormap, antenna.frame.shape)
+		(rgb_frames, brg_frames) = actions.colorize_frames(frames, configuration.colormap, antenna.frame.shape)
 
 		# Save the time-series version of the model's result to a file
 		actions.save_time_series(time_series, configuration.time_series_file)
 
 		# Save the data frames from the model's result to an image file as a "temporal contact sheet"
 		image = actions.save_frames_image(rgb_frames, configuration.image_file)
-		#image.show()
+		image.show()
 
 		# Save the data frames from the model's result to a video file, with each frame of data representing a frame of video
-		actions.save_frames_video(bgr_frames, configuration.video_file, (bgr_frames.shape[1], 2))
+		actions.save_frames_video(brg_frames, configuration.video_file, (brg_frames.shape[1], 2))
 
 
 if (__name__ == "__main__"):

@@ -4,6 +4,8 @@ This also serves as an example project for how to set up any other projects
 Command line call -- led repeater <<command line parameters>>
 '''
 
+import numpy as np
+
 from  matplotlib import pyplot as plt
 
 import led.src.actions as actions
@@ -22,7 +24,7 @@ def main():
 	This is the meat of this python script
 	'''
 
-	configuration = Configuration(default_time_series_file=default_time_series_file, default_image_file=default_image_file, default_video_file=default_video_file, default_colormap="rainbow")
+	configuration = Configuration(default_time_series_file=default_time_series_file, default_image_file=default_image_file, default_video_file=default_video_file, default_colormap="seismic")
 	if (configuration.configured):
 		# All required command-line parameters have been inspected and hav been found to be at least syntactically valid, attempt to run this project
 
@@ -49,17 +51,24 @@ def main():
 		(time_series, frames) = actions.run_model(window, zero_source, window.length, figure, line, time_series, frames)
 
 		# Create colorized versions of the data frames using the colormap in the configuration
-		(rgb_frames, bgr_frames) = actions.colorize_frames(frames, configuration.colormap, window.frame.shape)
+		#(rgb_frames, brg_frames) = actions.colorize_frames(frames, configuration.colormap, window.frame.shape)
+
+		# Instead of using the colorize_frames method above, apply a linear red color filter to the frames
+		rgb_frames = np.zeros((frames.shape[0], frames.shape[1], 3), dtype=np.uint8)
+		brg_frames = np.zeros((frames.shape[0], frames.shape[1], 3), dtype=np.uint8)
+		for i in range(frames.shape[0]):
+			rgb_frames[i] = np.c_[(255 * np.ones(frames[i].shape)).astype(np.uint8), (255 - (255 * frames[i] / 100).astype(np.uint8)).astype(np.uint8), (255 - (255 * frames[i] / 100).astype(np.uint8)).astype(np.uint8)]
+			brg_frames[i] = np.c_[(255 - (255 * frames[i] / 100).astype(np.uint8)).astype(np.uint8), (255 * np.ones(frames[i].shape)).astype(np.uint8), (255 - (255 * frames[i] / 100).astype(np.uint8)).astype(np.uint8)]
 
 		# Save the time-series version of the model's result to a file
 		actions.save_time_series(time_series, configuration.time_series_file)
 
 		# Save the data frames from the model's result to an image file as a "temporal contact sheet"
 		image = actions.save_frames_image(rgb_frames, configuration.image_file)
-		#image.show()
+		image.show()
 
 		# Save the data frames from the model's result to a video file, with each frame of data representing a frame of video
-		actions.save_frames_video(bgr_frames, configuration.video_file, (bgr_frames.shape[1], 2))
+		actions.save_frames_video(brg_frames, configuration.video_file, (brg_frames.shape[1], 2))
 		'''
 		'''
 

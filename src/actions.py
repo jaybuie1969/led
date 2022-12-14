@@ -236,7 +236,9 @@ def colorize_frames(frames:np.ndarray, colormap:any, frame_shape:tuple):
 	This function takes in a set of data frames and applies color to its values according to the accompanying colormap
 	Because this application uses two different libraries, one to generate an image and one to generate a video
 	The image creation library wants the color data in Red - Green - Blue (RGB) order
-	The video creation library wants the color dat in Blue - Green - Red (BGR) order
+	The video creation library wants the color dat in Blue - Red - Green (BRG) order
+		USING THIS COLORIZED SET OF FRAMES TO CREATE THE VIDEO FILE WILL PRODUCT A COLOR-DISTORTED VIDEO, BUT WHEN THE MOVIE IS USED BY
+		THE LEDEDIT SOFTWARE TO GENERATE THE LET LIGHT PROGRAM, THE GREEN AND RED CHANNELS ARE SWITCHED, SO THE COLORS WILL BE CORRECT IN THE LED STRING
 
 	Parameters
 	----------
@@ -253,14 +255,13 @@ def colorize_frames(frames:np.ndarray, colormap:any, frame_shape:tuple):
 		The frames argument with the colormap applied, with each value converted to a set of RGB integers ranging between 0 and 255
 		This is done because the pillow library that creates an image from these frames wants the values to be in RGB format
 	numpy.ndarray
-		The frames argument with the colormap applied, with each value converted to a set of BGR (RGB flipped) integers ranging between 0 and 255
-		This is done because the cv2 library that creates a video from these frames wants the values to be in BGR format
+		The frames argument with the colormap applied, with each value converted to a set of BRG (Blue-Red-Green) integers ranging between 0 and 255
 	'''
 
 	# Validate all incoming arguments, raising Exceptions if they are not valid
 
 	return_rgb = None
-	return_bgr = None
+	return_brg = None
 
 	if (type(frames) != np.ndarray):
 		# Confirming that an object is a numpy array is a little different with checking for None
@@ -283,6 +284,16 @@ def colorize_frames(frames:np.ndarray, colormap:any, frame_shape:tuple):
 
 	# If the method call has made it to this point, all incoming arguments are at least syntactically valid, now save time_series
 
+	# Attempt to normalize the values in frames to make them all between zero and one
+	minimum = np.min(frames)
+	maximum = np.max(frames)
+	if (minimum != maximum):
+		# frames contains something other than the same value in every position, normalize it
+		frames = (frames - minimum) / (maximum - minimum)
+	else:
+		# frames only contains the same value in every position, flatten the whole thing to an array of ones
+		frames = np.ones(frames.shape)
+
 	# Initialize the color-mapped version of the data frames by applying a color map to the first frame, removing its alpha value (the A in RGBA)
 	# and converting the remaining RGB values from floats between 0 and 1 to integers between 0 and 255
 	# Then iterate over the rest of frames, perform the same color mapping and conversion on each one and append the result to mapped_frames
@@ -292,10 +303,11 @@ def colorize_frames(frames:np.ndarray, colormap:any, frame_shape:tuple):
 
 	return_rgb = np.array(255 * np.delete(return_rgb, 3, 2)).astype(np.uint8)
 
-	# Convert the RGB-formatted version of the frames to BGR-formatted (Blue-Green-Red) by flipping the individual pixels RGB values
-	return_bgr = np.flip(return_rgb, axis=(len(return_rgb.shape) - 1))
+	# Convert the RGB-formatted version of the frames to BRG-formatted (Blue-Red-Green) by rotating right the individual pixel's RGB values
+	#return_brg = np.flip(return_rgb, axis=(len(return_rgb.shape) - 1))
+	return_brg = np.roll(return_rgb, 1, axis=(len(return_rgb.shape) - 1))
 
-	return (return_rgb, return_bgr)
+	return (return_rgb, return_brg)
 
 
 def save_frames_image(frames:np.ndarray, filename:str):
@@ -352,7 +364,7 @@ def save_frames_video(frames:np.ndarray, filename:str, frame_shape:tuple, codec:
 	Parameters
 	----------
 	frames : np.ndarray
-		The set of data frames that will be converted to a video, they are assumed to already be colorized and in BGR format
+		The set of data frames that will be converted to a video, they are assumed to already be colorized and in BRG format
 	filename : str
 		The name of the file to which this video will be saved
 	frame_shape : tuple
@@ -414,7 +426,7 @@ def save_frames_video(frames:np.ndarray, filename:str, frame_shape:tuple, codec:
 
 	# If the method call has made it to this point, all incoming arguments are at least syntactically valid, now save time_series
 
-	# For data frames that are only one pixel wide (i.e. three BGR color elements), the data frame must be added the video obect twice
+	# For data frames that are only one pixel wide (i.e. three BRG color elements), the data frame must be added the video obect twice
 	add_twice = True if ((len(frames.shape) > 2) and (frames.shape[-3] > 0) and (frames[0].shape[1] == 3)) else False
 
 	out_video = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*codec), frames_per_second, frame_shape)

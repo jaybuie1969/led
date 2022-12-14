@@ -119,7 +119,6 @@ class LEDModel:
 		'''
 		This computed property is an alias for whatever property in the child subclass is intended to hold the current state of this model
 		'''
-		print("In property self.frame")
 		return getattr(self, self.frame_attribute) if (self.frame_attribute != None) else None
 
 
