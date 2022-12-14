@@ -3,7 +3,7 @@ Generate video configuration files for programmable LED systems
 
 This LED project handler was designed in a Windows environment and intended to be invoked through the let.bat batch file
 
-For example, the command "led quarterwave -l 300" will execute the project located in the .\quarterwave\main.py Python script, passing in the "-l 300"
+For example, the command "led quarterwave -l 300" will execute the project defined in the .\quarterwave\main.py Python script, passing in the "-l 300"
 command-line parameter
 
 Any of the projects that have been built so far will serve as an excellent reference for building any new desired projects
