@@ -15,6 +15,7 @@ from led.src.ledmodels import ScrollingWindow
 from led.src.signalgenerators import ConstantGenerator, SignalRepeater
 
 default_time_series_file = "repeater_time_series.json"
+default_frames_file = "repeater_frames.json"
 default_image_file = "repeater_image.png"
 default_video_file = "repeater_video.mp4"
 
@@ -24,7 +25,7 @@ def main():
 	This is the meat of this python script
 	'''
 
-	configuration = Configuration(default_time_series_file=default_time_series_file, default_image_file=default_image_file, default_video_file=default_video_file, default_colormap="seismic")
+	configuration = Configuration(default_time_series_file=default_time_series_file, default_frames_file=default_frames_file, default_image_file=default_image_file, default_video_file=default_video_file, default_colormap="seismic")
 	if (configuration.configured):
 		# All required command-line parameters have been inspected and hav been found to be at least syntactically valid, attempt to run this project
 

@@ -1,5 +1,6 @@
 from argparse import ArgumentParser, Namespace
 
+
 class Configuration:
 	'''
 	THIS CLASS IS NOT INTENDED TO BE INSTANTIATED DIRECTLY
@@ -8,7 +9,9 @@ class Configuration:
 	It takes in a set of defaults and defines an initial set of command-line arguments for parsing
 	'''
 
+	project_folder = None
 	time_series_file = None
+	frames_file = None
 	image_file = None
 	video_file = None
 
@@ -33,6 +36,11 @@ class Configuration:
 				"type": str,
 			},
 			{
+				"name": "default_frames_file",
+				"attribute": "frames_file",
+				"type": str,
+			},
+			{
 				"name": "default_image_file",
 				"attribute": "image_file",
 				"type": str,
@@ -44,6 +52,7 @@ class Configuration:
 			},
 		]
 
+		# Look for each required keyword argument within the incoming set of initialization arguments
 		for kwarg in required_kwargs:
 			if (kwarg["name"] not in kwargs):
 				self.errors.append(f"Configuration object requires named argument {kwarg['name']} of type {kwarg['type'].__name__}")
@@ -84,20 +93,25 @@ class Configuration:
 			# For each of these destination filename arguments, check to see if each one includes a directory path or is just a bare file name
 			# If it includes a directory path, copy it across as-is; if it is a bare file name, prepend the projectfolder argument to it
 
+			self.project_folder = arguments.projectfolder
+
 			if (arguments.time_series != None):
-				self.time_series_file = arguments.time_series if ((arguments.time_series.find("/") + arguments.time_series.find("\\")) >= 0) else f"{arguments.projectfolder}/{arguments.time_series}"
+				self.time_series_file = arguments.time_series if ((arguments.time_series.find("/") + arguments.time_series.find("\\")) >= 0) else f"{self.project_folder}/{arguments.time_series}"
 			elif ((self.time_series_file.find("/") + self.time_series_file.find("\\")) < 0):
-				self.time_series_file = f"{arguments.projectfolder}/{self.time_series_file}"
+				self.time_series_file = f"{self.project_folder}/{self.time_series_file}"
+
+			if ((self.frames_file.find("/") + self.frames_file.find("\\")) < 0):
+				self.frames_file = f"{self.project_folder}/{self.frames_file}"
 
 			if (arguments.image != None):
-				self.image_file = arguments.image if ((arguments.image.find("/") + arguments.image.find("\\")) >= 0) else f"{arguments.projectfolder}/{arguments.image}"
+				self.image_file = arguments.image if ((arguments.image.find("/") + arguments.image.find("\\")) >= 0) else f"{self.project_folder}/{arguments.image}"
 			elif ((self.image_file.find("/") + self.image_file.find("\\")) < 0):
-				self.image_file = f"{arguments.projectfolder}/{self.image_file}"
+				self.image_file = f"{self.project_folder}/{self.image_file}"
 
 			if (arguments.video != None):
-				self.video_file = arguments.video if ((arguments.video.find("/") + arguments.video.find("\\")) >= 0) else f"{arguments.projectfolder}/{arguments.video}"
+				self.video_file = arguments.video if ((arguments.video.find("/") + arguments.video.find("\\")) >= 0) else f"{self.project_folder}/{arguments.video}"
 			elif ((self.video_file.find("/") + self.video_file.find("\\")) < 0):
-				self.video_file = f"{arguments.projectfolder}/{self.video_file}"
+				self.video_file = f"{self.project_folder}/{self.video_file}"
 
 		return arguments
 
@@ -111,15 +125,55 @@ class LEDModel:
 	frame that includes the state of every LED in the model
 	'''
 
+	length = None
+	current_value = None
+
 	# This attribute will hold the name of the attribute that will be aliased as the computed property "frame"
 	frame_attribute = None
+
+	@property
+	def newest(self):
+		'''
+		This computed property returns the newest value or set of values added to this model
+
+
+		Returns
+		-------
+		float or list[float]
+			Depending on the model, either a single floating-point value or a list of floating-point values
+		'''
+
+		return_value = None
+
+		if ((hasattr(self, "values")) and (type(self.values) == list)):
+			# If the child class has a list attribute named values, it is assumed that the model works with multiple incoming values at a time instead of just one
+			return_value = self.values
+		elif ((hasattr(self, "input_origin")) and (type(self.input_origin) == int)):
+			# If the child class has an integer attribute named input_origin, it is assumed that this is where the newest value is injected into the frame
+			return_value = self.frame[input_origin]
+		else:
+			# Otherwise, just assume that the first value in the frame is the newest
+			return_value = self.frame[0]
+
+		return return_value
+
 
 	@property
 	def frame(self):
 		'''
 		This computed property is an alias for whatever property in the child subclass is intended to hold the current state of this model
+		* If the child class has a method named compute_frame, that method is used to generate the frame
+		* Otherwise, if the child class has an attribute whose name matches the vaue of self.frame_attribute, that attribute is returned as the frame
+		* If neither of those is the case, an array of None values is returned
+
+		It is worth noting that if the child class creates its own attribute named frame, this will be overridden by that -- which is fine
+
+		Returns
+		-------
+		numpy.ndarray
+			The entire set of all LED values along the entire length of this model
 		'''
-		return getattr(self, self.frame_attribute) if (self.frame_attribute != None) else None
+		return self.compute_frame() if ((hasattr(self, "compute_frame")) and (callable(self.compute_frame))) else getattr(self, self.frame_attribute) if (self.frame_attribute != None) else np.empty((self.length, ))
 
 
 class SignalGenerator:
@@ -161,22 +215,12 @@ class SignalGenerator:
 	@property
 	def next(self):
 		'''
-		This computed property is the next value of this sine wave and saves the new value into the object's parameters
+		This computed property computes the next value of this signal generator and saves the new value into the object's current value
 
 		Returns
 		-------
 		any
 			The current value of this generator object, the exact type will depend on the generator
-		'''
-
-		'''
-		# Use the object's current sample counter to compute the next sine value
-		self.current_value = self.amplitude * sin((2.0 * pi * self.counter / self.wavelength) + self.phase)
-
-		# Increment counter for the next next() call
-		self.counter = self.counter + 1
-
-		return self.current_value
 		'''
 
 		self.compute_next_value()
@@ -201,3 +245,90 @@ class SignalGenerator:
 		# In the child class's version, the logic would go here and be used to set self.current_value
 		# self.current_value = <<RESULT OF SOME GENERATOR LOGIC>>
 		pass
+
+
+class SignalAggregator:
+	'''
+	THIS CLASS IS NOT INTENDED TO BE INSTANTIATED DIRECTLY
+	This class definition is intended to be used as a parent class for signal agregators built for this application
+	This class defines a minimal obect to handle retrieving the current set of values to be emitted by this aggregator and for computing the next set of values
+	The intention is that the child class will handle the specific logic for computing the next value
+	'''
+
+	signal_file = None
+	project_folder = ""
+
+	signal_set = None
+	generators = None
+
+	finite_signals = None
+	counter = 0
+	current_values = None
+
+	def compute_next_values(self):
+		'''
+		THIS METHOD IS NOT INTENDED TO BE USED AS IS -- IT IS INTENDED TO BE OVERWRITTEN BY THE CHILD CLASS
+		This method is included here as a place-holding interface
+		The child class's version should incorporate the logic needed by this particular model to compute the next set of value to be emited by this aggregator
+		'''
+
+		# In the child class's version, the logic would go here and be used to set self.current_values
+		# self.current_value = <<RESULT OF SOME GENERATOR LOGIC>>
+
+		# Iterate over this aggregator's set of generators and compute each one's next values
+		if (type(self.generators) == list):
+			self.current_values = [generator.next for generator in self.generators]
+
+	@property
+	def current(self):
+		'''
+		This computed property is the current value of this sine wave generator
+		If this object has not been started with a next() method call, it will return a None
+
+		Returns
+		-------
+		any
+			The current value of this generator object, the exact type will depend on the generator
+		'''
+		return self.current_values
+
+	@property
+	def next(self):
+		'''
+		This computed property computes the next set of values of this aggregators' included signals and saves the new value into the object's set of current values
+
+		Returns
+		-------
+		list[any]
+			The list of current values from this aggregator's generator objects, the exact types will depend on the generators
+		'''
+
+		self.compute_next_values()
+
+		# Increment counter for the next compute_next_values() call
+		self.counter = self.counter + 1
+
+		return self.current_values
+
+	def input(self, values:list):
+		'''
+		THIS METHOD IS NOT INTENDED TO BE USED AS IS -- IT IS INTENDED TO BE OVERWRITTEN BY THE CHILD CLASS
+		This method is included here as a place-holding interface
+		The child class's version should incorporate the logic needed by this particular model to handle the signal value(s) coming in from the source signal generator(s)
+
+		Parameters
+		----------
+		value : list[any]
+			The set of values that is coming into this aggregator's signal eeneratorsmodel, the particulars about type and any processing will be handled by the child class's implementation of this method
+		'''
+
+		# In the child class's version, the logic would go here and be used to set self.current_value
+		# self.current_value = <<RESULT OF SOME GENERATOR LOGIC>>
+		pass
+
+	@property
+	def end_of_all_finite_signals(self):
+		'''
+		This computed property looks at each signal generator that has a finite signal and returns true only if all of them are at the ends of their signals
+		'''
+		return all([generator.end_of_signal for generator in self.finite_signals]) if (self.finite_signals != []) else False

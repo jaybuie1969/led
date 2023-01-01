@@ -14,7 +14,6 @@ class QuarterWave(__BaseModel__):
 	# In this case, it is intended to be the total current flowing through the antenna at the given moment
 	frame_attribute = "current"
 
-	length = None
 	current_forward = None
 	current_backward = None
 
@@ -85,8 +84,6 @@ class ScrollingWindow(__BaseModel__):
 	# set a "frame_attribute" attribute
 	frame = None
 
-	length = None
-
 	default_direction = "left"
 	direction = None
 
@@ -100,6 +97,12 @@ class ScrollingWindow(__BaseModel__):
 		length : int
 			The length of this scrolling window model in terms of the number of LEDs in a straight line
 			length must be a positive integer
+		direction : str
+			The direction to which this scrolling window scrolls the signal it is displaying
+			Valid values are "left," "right" or "both"
+			Defaults to "left" if not present
+		input_origin : int
+			The point along the length of the window where the signal is injected -- mainly useful for a window that scrolls in both directions
 		'''
 
 		length = int(length)
@@ -130,20 +133,20 @@ class ScrollingWindow(__BaseModel__):
 									elif (input_origin >= length):
 										raise Exception(f"if present and relevant, argument input_origin must be a number between zero and one less than the argument length ({length}), not {input_origin}")
 
-			# If this set of input check has made it here without raising an exception, everything was validated, save the parameters to the object
+		# If this set of input check has made it here without raising an exception, everything was validated, save the parameters to the object
 
-			self.length = length
-			self.direction = direction if (direction != None) else self.default_direction
+		self.length = length
+		self.direction = direction if (direction != None) else self.default_direction
 
-			# Only worry about setting self.input_origin if the window is supposed to scroll in both directions
-			if (self.direction == "both"):
-				if (input_origin != None):
-					self.input_origin = input_origin
-				else:
-					# If no input_origin was included, then set input origin to the frame's halfway point
-					self.input_origin = int(self.length / 2)
+		# Only worry about setting self.input_origin if the window is supposed to scroll in both directions
+		if (self.direction == "both"):
+			if (input_origin != None):
+				self.input_origin = input_origin
+			else:
+				# If no input_origin was included, then set input origin to the frame's halfway point
+				self.input_origin = int(self.length / 2)
 
-			self.frame = np.zeros(self.length, dtype=float)
+		self.frame = np.zeros(self.length, dtype=float)
 
 	def input(self, value:float=None):
 		'''
@@ -154,7 +157,6 @@ class ScrollingWindow(__BaseModel__):
 		----------
 		value : float
 			The amount of current flowing into this antenna
-			value has no presumed unit right now, it is simply a floating-point number, if this model evolves to include resistance, that will probably change
 		'''
 
 		if (value != None):
@@ -163,7 +165,7 @@ class ScrollingWindow(__BaseModel__):
 			else:
 				value = float(value)
 		else:
-				value = 0.0
+			value = 0.0
 
 		# If this method call gets to this point, value is either None or a numeric value, handle it
 
@@ -191,3 +193,113 @@ class ScrollingWindow(__BaseModel__):
 		self.frame = new_frame
 
 
+class Gauges(__BaseModel__):
+	'''
+	This class defines a string of LED lights used as a set of simple gauges
+	Each gauge is an independent incoming signal and is saved within this model independently of the other gauges' values
+	The string of LEDs is separated into equal-length units, one for each gauge
+	'''
+
+	values = None
+
+	def __init__(self, length:int, gauges:int):
+		'''
+		Parameters
+		----------
+		length : int
+			The length of this scrolling window model in terms of the number of LEDs in a straight line
+			length must be a positive integer
+		gauges : int
+			The number of gauges that will be displayed along this string of LEDs
+			gauges must be a positive ingeter less than or equal to length // 3 (realistically, keep it to ten or below)
+		'''
+
+		length = int(length)
+		if (length <= 0):
+			raise Exception(f"argument length must be a positive integer, {length} is invalid")
+		else:
+			# length is valid, now check gauges
+
+			gauges = int(gauges)
+			if (gauges <= 0):
+				raise Exception(f"argument gauges must be a positive integer, {gauges} is invalid")
+			elif (gauges > (length // 3)):
+				raise Exception(f"argument gauges cannot be greater than one-third of the length argument ({length // 3} in this case), {gauges} is invalid")
+
+		# If this set of input check has made it here without raising an exception, everything was validated, save the parameters to the object
+
+		self.length = length
+		self.values = [0.0] * gauges
+
+	def inputs(self, values:list=None):
+		'''
+		This method takes in the lastest set of values from its input and places them into their desired locations in self.gauges
+
+		Parameters
+		----------
+		values : list[float]
+			The new set of values for each gauge being displayed by this model
+			Each value is presumed to be a floating-point number, but they will be checked, generating an Exception if one isn't
+		'''
+
+		gauge_count = len(self.values)
+		if (values != None):
+			if (type(values) != list):
+				raise Exception(f"argument values must be a list of numbers, not an object of type {type(value)}")
+			else:
+				# values is a list, copy all eligibie (i.e. not beyond the length of self.gauges) elements of values into self.gauges
+
+				value_count = len(values)
+				for i in range(min(value_count, gauge_count)):
+					self.values[i] = float(values[i]) if (values[i] != None) else None
+
+				# If necessary (i.e. values is shorter than self.gauges), go through and set the remaining elements in self.gauges to zero
+				for i in range(value_count, gauge_count):
+					self.values[i] = 0.0
+
+		else:
+			self.values = [0.0] * gauge_count
+
+	def compute_frame(self):
+		'''
+		This method computes the frame current values for each LED in this window
+		'''
+
+		# Initialize return_value to an empty list that will be built over the course of this method call
+		return_value = []
+
+		# Get the number of pixels per gauge, remembering to subtract a pixel from each end for a little bit of spacing between the gauges
+		gauge_count = len(self.values)
+		pixels_per_gauge = (self.length // gauge_count) - 2
+
+		for i in range(gauge_count):
+			return_value.append(0.0)
+			return_value.extend([self.values[i]] * pixels_per_gauge)
+			return_value.append(0.0)
+
+		# If necessary, add zeros to the end of return_value to make sure it is as long as self.length
+		elements_to_add = self.length - len(return_value)
+		if (elements_to_add > 0):
+			return_value.extend([0.0] * elements_to_add)
+
+		return np.array(return_value)
+
+	@property
+	def gauge_locations(self):
+		'''
+		This computed property returns a list of the starting and ending pixels for each gauge in this model
+		'''
+
+		return_value = []
+
+		# Get the number of pixels per gauge, remembering to subtract a pixel from each end for a little bit of spacing between the gauges
+		gauge_count = len(self.values)
+		pixels_per_gauge = (self.length // gauge_count) - 2
+
+		# Iterate over the gauges to set each one's start and end pixes in return_value
+		current_position = 0
+		for i in range(gauge_count):
+			return_value.append([current_position + 1, current_position + pixels_per_gauge])
+			current_position = current_position + 1 + pixels_per_gauge + 1
+
+		return return_value

@@ -15,6 +15,7 @@ from led.src.ledmodels import ScrollingWindow
 from led.src.signalgenerators import ConstantGenerator, MorseCodeGenerator
 
 default_time_series_file = "morsecode_time_series.json"
+default_frames_file = "morsecode_frames.json"
 default_image_file = "morsecode_image.png"
 default_video_file = "morsecode_video.mp4"
 
@@ -24,7 +25,7 @@ def main():
 	This is the meat of this python script
 	'''
 
-	configuration = Configuration(default_time_series_file=default_time_series_file, default_image_file=default_image_file, default_video_file=default_video_file, default_colormap="hot")
+	configuration = Configuration(default_time_series_file=default_time_series_file, default_frames_file=default_frames_file, default_image_file=default_image_file, default_video_file=default_video_file, default_colormap="hot")
 	if (configuration.configured):
 		# All required command-line parameters have been inspected and hav been found to be at least syntactically valid, attempt to run this project
 

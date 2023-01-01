@@ -4,6 +4,8 @@ This also serves as an example project for how to set up any other projects
 Command line call -- led quarterwave <<command line parameters>>
 '''
 
+import numpy as np
+
 from  matplotlib import pyplot as plt
 
 import led.src.actions as actions
@@ -13,6 +15,7 @@ from led.src.ledmodels import QuarterWave
 from led.src.signalgenerators import ConstantGenerator, SineWaveGenerator
 
 default_time_series_file = "quarterwave_time_series.json"
+default_frames_file = "quarterwave_frames.json"
 default_image_file = "quarterwave_image.png"
 default_video_file = "quarterwave_video.mp4"
 
@@ -22,7 +25,7 @@ def main():
 	This is the meat of this python script
 	'''
 
-	configuration = Configuration(default_time_series_file=default_time_series_file, default_image_file=default_image_file, default_video_file=default_video_file, default_colormap="plasma")
+	configuration = Configuration(default_time_series_file=default_time_series_file, default_frames_file=default_frames_file, default_image_file=default_image_file, default_video_file=default_video_file, default_colormap="Set1")
 	if (configuration.configured):
 		# All required command-line parameters have been inspected and hav been found to be at least syntactically valid, attempt to run this project
 
@@ -66,7 +69,7 @@ def main():
 		(time_series, frames) = actions.run_model(antenna, sine_sources, samples_to_run, figure, line_current)
 		'''
 
-		samples_to_run = 2 * int(sine_sources[0].wavelength)
+		samples_to_run = int(2 * sine_sources[0].wavelength)
 		(time_series, frames) = actions.run_model(antenna, sine_sources, samples_to_run, figure, line_current)
 
 		# Run a zereo signal through the antenna for the amount of time it takes for any current on the antemma to propagate to ground
@@ -74,7 +77,36 @@ def main():
 		(time_series, frames) = actions.run_model(antenna, zero_source, samples_to_run, figure, line_current, time_series, frames)
 
 		# Create colorized versions of the data frames using the colormap in the configuration
-		(rgb_frames, brg_frames) = actions.colorize_frames(frames, configuration.colormap, antenna.frame.shape)
+		#(rgb_frames, brg_frames) = actions.colorize_frames(frames, configuration.colormap, antenna.frame.shape)
+
+		'''
+		# Instead of using the colorize_frames method above, apply a linear red color filter to the frames
+		rgb_frames = np.zeros((frames.shape[0], frames.shape[1], 3), dtype=np.uint8)
+		brg_frames = np.zeros((frames.shape[0], frames.shape[1], 3), dtype=np.uint8)
+
+		# Initialize the normalized version of frames to contain all 255 (largest byte value)
+		frames_normalized = 255 * np.ones(frames.shape, dtype=np.uint8)
+
+		# Get the minimum and maximum values from frames to use for normalizing it
+		minimum = np.min(frames)
+		maximum = np.max(frames)
+		if (minimum != maximum):
+			# frames contains something other than the same value in every position, set the normalized version of it to byte values between 0 and 255
+			frames_normalized = (255 * (frames - minimum) / (maximum - minimum)).astype(np.uint8)
+
+		# Iterate over the normalized frames and apply a Christmas red/green color map with eight equal-sized alternating red and green stripes
+		blue_stripes = np.zeros(frames_normalized[0].shape, dtype=np.uint8)
+		for i in range(frames_normalized.shape[0]):
+			red_stripes = (255 * ((frames_normalized[i] // 16) % 2)).astype(np.uint8)
+			green_stripes = (255 * (red_stripes == 0).astype(np.uint8)).astype(np.uint8)
+			rgb_frames[i] = np.c_[red_stripes, green_stripes, blue_stripes]
+			brg_frames[i] = np.c_[blue_stripes, red_stripes, green_stripes]
+
+		# Only take the first full standing wave to use in the animation
+		frames = frames[600 : 1800]
+		rgb_frames = rgb_frames[600 : 1800]
+		brg_frames = brg_frames[600 : 1800]
+		'''
 
 		# Save the time-series version of the model's result to a file
 		actions.save_time_series(time_series, configuration.time_series_file)
