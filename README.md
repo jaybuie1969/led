@@ -3,7 +3,7 @@ Generate video configuration files for programmable LED systems
 
 This LED project handler was designed in a Windows environment and intended to be invoked through the let.bat batch file
 
-For example, the command "led quarterwave -l 300" will execute the project located in the .\quarterwave\main.py Python script, passing in the "-l 300"
+For example, the command "led quarterwave -l 300" will execute the project defined in the .\quarterwave\main.py Python script, passing in the "-l 300"
 command-line parameter
 
 Any of the projects that have been built so far will serve as an excellent reference for building any new desired projects
@@ -39,3 +39,5 @@ The important output of a project is the video file.  It is used by the LEDEdit 
 The signal output time series and the waterfall image are technically unnecessary artifacts of the production process, but can be useful.  The time series can be
 used again and fed into a "repeater" signal generator.  The waterfall image is a useful analysis tool to show each frame of the video at one time.
 
+NOTE:  BY DEFAULT, THE LEDEdit SOFTWARE ENDS UP SWAPPING THE RED AND GREEN CHANNELS FROM THE GENERATED VIDEO, SO A CHANGE WAS MADE TO COLOR-DISTORT THE
+VIDEO FILE SO THAT THE GENERATED PROGRAM FOR THE LED LIGHT STRING WILL HAVE THE CORRECT COLORS
