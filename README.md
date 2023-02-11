@@ -3,8 +3,10 @@
 Generate video configuration files for programmable LED systems
 
 *NEW - MICROPYTHON - BASED PROJECT*
+
 The ./micropython directory contains my first real Raspberry Pi project
 It is a proof-of-concept application that reads through a CSV file and displays the alarm status for four different complex systems in simple GREEN / YELLOW / RED color bars on an LED string
+
 
 *LED VIDEO CREATION SECTION*
 
