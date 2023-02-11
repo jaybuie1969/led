@@ -1,4 +1,4 @@
-#Raspberry Pi
+# Raspberry Pi
 
 This micropython project was written to run on a Raspberry Pi microcontroller
 
