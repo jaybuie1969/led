@@ -265,6 +265,8 @@ class SignalAggregator:
 	counter = 0
 	current_values = None
 
+	errors = []
+
 	def compute_next_values(self):
 		'''
 		THIS METHOD IS NOT INTENDED TO BE USED AS IS -- IT IS INTENDED TO BE OVERWRITTEN BY THE CHILD CLASS

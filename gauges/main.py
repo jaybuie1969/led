@@ -60,7 +60,11 @@ def main():
 
 		for i in range(frames.shape[0]):
 			for location in gauges.gauge_locations:
-				if ((frames[i][location[0]] == None) or (frames[i][location[0]] <= 2)):
+				if (frames[i][location[0]] == None):
+					# This gauge is not returing any data, color this section black
+					rgb_frames[i][location[0] : location[1] + 1] = [0, 0, 0]
+					brg_frames[i][location[0] : location[1] + 1] = [0, 0, 0]
+				elif (frames[i][location[0]] <= 2):
 					# This gauge is very low (2 or lower), color this section green
 					rgb_frames[i][location[0] : location[1] + 1] = [0, 255, 0]
 					brg_frames[i][location[0] : location[1] + 1] = [0, 0, 255]
