@@ -1,10 +1,18 @@
 # led
+
 Generate video configuration files for programmable LED systems
 
-This LED project handler was designed in a Windows environment and intended to be invoked through the let.bat batch file
+*NEW - MICROPYTHON - BASED PROJECT*
+The ./micropython directory contains my first real Raspberry Pi project
+It is a proof-of-concept application that reads through a CSV file and displays the alarm status for four different complex systems in simple GREEN / YELLOW / RED color bars on an LED string
 
+*LED VIDEO CREATION SECTION*
+
+This LED project handler was designed in a Windows environment and intended to be invoked through the led.bat batch file
 For example, the command "led quarterwave -l 300" will execute the project defined in the .\quarterwave\main.py Python script, passing in the "-l 300"
 command-line parameter
+
+It creates a video file from the project that it executes and this video file is then used to generate an LED controller program
 
 Any of the projects that have been built so far will serve as an excellent reference for building any new desired projects
 
